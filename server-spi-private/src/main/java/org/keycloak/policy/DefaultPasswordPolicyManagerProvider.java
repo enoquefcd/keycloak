@@ -20,10 +20,13 @@ package org.keycloak.policy;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.keycloak.component.ComponentFactory;
+import org.keycloak.component.ComponentModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.PasswordPolicy;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
+import org.keycloak.provider.ProviderFactory;
 
 /**
  * @author <a href="mailto:sthorger@redhat.com">Stian Thorgersen</a>
@@ -74,7 +77,26 @@ public class DefaultPasswordPolicyManagerProvider implements PasswordPolicyManag
             PasswordPolicyProvider provider = session.getProvider(PasswordPolicyProvider.class, id);
             list.add(provider);
         }
+        realm.getComponentsStream(realm.getId(), PasswordPolicyProvider.class.getName())
+                .forEach(component -> {
+                    PasswordPolicyProvider provider = createComponentProvider(session, component);
+                    if (provider != null) {
+                        list.add(provider);
+                    }
+                });
         return list;
+    }
+
+    private PasswordPolicyProvider createComponentProvider(KeycloakSession session, ComponentModel component) {
+        ProviderFactory<PasswordPolicyProvider> factory = session.getKeycloakSessionFactory()
+                .getProviderFactory(PasswordPolicyProvider.class, component.getProviderId());
+        if (factory instanceof ComponentFactory) {
+            Object provider = ((ComponentFactory<?, ?>) factory).create(session, component);
+            if (provider instanceof PasswordPolicyProvider passwordPolicyProvider) {
+                return passwordPolicyProvider;
+            }
+        }
+        return null;
     }
 
 }
