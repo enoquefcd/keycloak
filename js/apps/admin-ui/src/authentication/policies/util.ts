@@ -1,3 +1,4 @@
+import type { ConfigPropertyRepresentation } from "@keycloak/keycloak-admin-client/lib/defs/configPropertyRepresentation";
 import type PasswordPolicyTypeRepresentation from "@keycloak/keycloak-admin-client/lib/defs/passwordPolicyTypeRepresentation";
 
 export type SubmittedValues = {
@@ -5,6 +6,34 @@ export type SubmittedValues = {
 };
 
 const POLICY_SEPARATOR = " and ";
+
+const VALUE_SEPARATOR = ",";
+
+const toDefaultString = (property: ConfigPropertyRepresentation) =>
+  property.defaultValue?.toString() ?? "";
+
+export const unpackPolicyValue = (
+  value: string | undefined,
+  properties: ConfigPropertyRepresentation[],
+): Record<string, string> => {
+  const segments = value
+    ? value.split(VALUE_SEPARATOR).map((segment) => segment.trim())
+    : [];
+  return Object.fromEntries(
+    properties.map((property, index) => [
+      property.name!,
+      segments[index] ?? toDefaultString(property),
+    ]),
+  );
+};
+
+export const packPolicyValue = (
+  values: Record<string, string>,
+  properties: ConfigPropertyRepresentation[],
+): string =>
+  properties
+    .map((property) => values[property.name!] ?? toDefaultString(property))
+    .join(VALUE_SEPARATOR);
 
 export const serializePolicy = (
   policies: PasswordPolicyTypeRepresentation[],
